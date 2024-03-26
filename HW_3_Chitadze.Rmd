@@ -1,0 +1,170 @@
+---
+title: "ДЗ_3_Читадзе"
+output: html_document
+date: "2024-03-26"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Тема:
+
+Расчет описательных статистик.
+
+## Цель:
+
+Научиться считать описательные статистики для количественной и категориальной переменных, строить доверительный интервал, а также графики плотности вероятности.
+
+## Описание ДЗ
+
+В RStudio создайте RMarkdown-файл и загрузите датасет pima. В первых двух заданиях вам необходимо посчитать описательные статистики. Для количественной переменной рассчитайте число наблюдений, среднее, стандартное отклонение, 1-й и 3-й квартили, минимум и максимум. Для категориальной переменной определите абсолютную и относительные частоты.
+
+```{r}
+library(tidyverse)
+library(readxl)
+```
+
+```{r}
+# Загружеам и читаем  датасет для работы
+df <- read_excel(path = 'pima.xlsx')
+head(df)
+```
+```{r}
+# Выаолняем необходимы преобразования с данными 
+df <- na.omit(df)
+df <- df %>%
+    mutate_at(vars(diabetes), as.factor)
+```
+
+## Задание 1
+Рассчитайте описательные статистики для переменных glucose, pressure, mass.
+
+```{r}
+# Расчет основных статистик для каждой переменной:
+glucose_stat <- summary(df$glucose)
+pressure_stat <- summary(df$pressure)
+mass_stat <- summary(df$mass)
+```
+
+```{r}
+# Расчет стандартного отклонения для каждой переменной:
+glucose_sd <- sd(df$glucose, na.rm = TRUE)
+pressure_sd <- sd(df$pressure, na.rm = TRUE)
+mass_sd <- sd(df$mass, na.rm = TRUE)
+```
+
+```{r}
+glucose_stat
+pressure_stat
+mass_stat
+
+glucose_sd
+pressure_sd
+mass_sd
+```
+## Задача 2
+Рассчитайте описательную статистику для переменной diabetes. Создайте на основе переменной age новую переменную age_group, которая будет отражать следующие возрастные группы: 21–35, 36–49 и 50+. Посчитайте описательную статистику для новой переменной.
+
+```{r}
+# Абсолютные частоты 
+absolute_freq <- table(df$diabetes)
+print(absolute_freq)
+```
+
+```{r}
+# Относительные частоты 
+relative_freq <- prop.table(absolute_freq) * 100
+print(relative_freq)
+```
+
+```{r}
+# Создание переменной age_group
+df<- df %>%
+  mutate(age_group = ifelse(age <= 35, "21-35",
+  ifelse(age <= 49, "36-49", "50+")))
+df <- mutate(df, age_group = as.factor(age_group))
+```
+
+```{r}
+# Создание таблицы абсолютных частот
+age_abs <- table(df$age_group)
+# Вычисление относительных частот в процентах
+age_rel <- (age_abs / length(df$age_group)) * 100
+
+age_abs
+age_rel
+```
+
+## Задача 3
+Определите 90% доверительный интервал для переменной pedigree.
+```{r}
+# Вычисление среднего значения переменной pedigree
+mean_ped <- mean(df$pedigree)
+# Вычисление стандартного отклонения переменной pedigree
+sd_ped <- sd(df$pedigree)
+# Вычисление стандартной ошибки среднего переменной pedigree
+se_ped <- sd_ped / sqrt(length(df$pedigree))
+```
+
+```{r}
+# Вычисляем доверительный интервал для среднего значения переменной pedigree 
+alpha <- 0.1
+df1 <- length(df$pedigree) - 1
+t <- qt(alpha / 2, df1, lower.tail = F)
+
+pedigree_inter <- c(mean_ped- t * se_ped,
+                      mean_ped + t * se_ped)
+pedigree_inter
+```
+
+## Задача 4
+Постройте график плотности вероятности для переменной glucose и отметьте на нем среднее значение. Для той же переменной постройте гистограмму. Постройте два ящика с усами для значений pos и neg соответственно переменной diabetes.
+
+```{r}
+dens <- ggplot(data = df) +
+  geom_density(aes(glucose)) +
+  geom_vline(xintercept = mean(df$glucose), color = 'green') +
+  labs(title = "График плотности вероятности glucose")
+print(dens)
+```
+```{r}
+hist_gluc <- hist(df$glucose,
+  breaks = 60,
+  main = "Распределение глюкозы",
+  xlab = "glucose")
+
+print(hist_gluc)
+```
+
+```{r}
+box <- ggplot(data = df) +
+  geom_boxplot(aes(diabetes, glucose, fill = diabetes)) +
+  labs(title = "Распределение наличия диабета")
+print(box)
+```
+
+
+## Задача 5
+Постройте на одном графике две диаграммы рассеяния для наличия или отсутствия диабета. По оси X представьте значения обхвата трицепса, а по оси Y — массу тела. Выполните окрашивание, заливку и группирование по переменной diabetes.
+
+```{r}
+# Удаление строк, где обхват трицепса или масса тела равны нулю
+df_clean <- subset(df, triceps != 0 & mass != 0)
+
+# Создание графика с фасеткой
+facet <- ggplot(data = df_clean,
+                aes(x = triceps, y = mass, fill = factor(diabetes))) +
+  geom_point(color = "black", shape = 21, size = 4) +
+  scale_fill_manual(values = c("red", "green")) +
+  facet_grid(. ~ diabetes) +
+  labs(title = "Диаграмма рассеяния диабета",
+       x = "Обхват трицепса", y = "Масса тела") +
+  theme_light()
+
+print(facet)
+```
+
+
+
+
